@@ -1,0 +1,5 @@
+termserv and its client demonstrate how ssh works. It's unencrypted etc., but
+it's able to transmit a whole shell session over network, including vim, less,
+htop etc.
+
+It makes heavy use of pseudo terminals.
