@@ -40,6 +40,9 @@ int main(void)
 			write(1,buffer,read_bytes);
 		}
 
+		if ( read_bytes <= 0 )
+			break;
+
 		if ( FD_ISSET(0,&fds) )
 		{
 			read_bytes = read(0,buffer,31);
