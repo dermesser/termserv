@@ -37,7 +37,7 @@ int main(void)
 
 	// Get TCP connection
 
-	server = create_inet_server_socket("0.0.0.0","12345",TCP,IPv4,0);
+	server = create_inet_server_socket("::","12345",TCP,IPv6,0);
 
 	if ( server < 0 )
 	{

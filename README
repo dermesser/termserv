@@ -11,3 +11,6 @@ compiling termserv with the following commands:
 	$ gcc -o cl -lsocket client.c
 
 What's also important: Adapt the IP in client.c to your environment!
+
+===>>>>> AND THIS IS REALLY, REALLY, REALLY IMPORTANT: A RUNNING TERMSERV INSTANCE IS AN OPEN TELNET
+SERVER WITH ACCESS TO THE FULL ACCOUNT AND SHELL OF THE OWNER OF THE SERVER!!!11! <<<<<<===
