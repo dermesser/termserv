@@ -9,114 +9,149 @@
 # include <libsocket/libinetsocket.h>
 # include <termios.h>
 # include <sys/wait.h>
+# include <signal.h>
 
 struct termios original_state;
 
 pid_t cpid;
 
 void fork_child_shell(const char*);
-void set_tty_raw(void);
-void reset_tty(void);
 
-int main(int argc, char** argv)
+// Util
+void process_child(int sig)
 {
-	int masterfd = 0, selret = 0, scriptfd = 0, retbuf = 0, server = 0, accepted = 0;
+	wait3(0,WNOHANG,0);
+}
+
+int main(void)
+{
+	int masterfd = 0, selret = 0, retbuf = 0, server = 0, accepted = 0;
+	pid_t handle_pid = 0;
 	ssize_t read_bytes = 0;
 	char* slave_pts;
 	char buffer[32];
 
 	fd_set fds;
 
-	// Allocate new pseudo terminal
-	masterfd = posix_openpt(O_RDWR|O_NOCTTY);
-	
-	if ( masterfd < 0 )
-	{
-		perror("posix_openpt\n");
-		exit(1);
-	}
-
-	// Change permissions of terminal
-	retbuf = grantpt(masterfd);
-	
-	if ( retbuf < 0 )
-	{
-		perror("grantpt\n");
-		exit(1);
-	}
-
-	// Get name of terminal (/dev/pts/...)
-	slave_pts = ptsname(masterfd);
-
-	if ( slave_pts == NULL )
-	{
-		perror("ptsname\n");
-		exit(1);
-	}
-
-	// Unlock terminal so the child can read/write from/to it
-	retbuf = unlockpt(masterfd);
-	
-	if ( retbuf < 0 )
-	{
-		perror("unlockpt\n");
-		exit(1);
-	}
+	signal(SIGCHLD,*(process_child));
 
 	// Get TCP connection
-	
+
 	server = create_inet_server_socket("0.0.0.0","12345",TCP,IPv4,0);
-	
-	accepted = accept_inet_stream_socket(server,NULL,0,NULL,0,0,0);
 
-	close(server);
-	
-	// Fork child
-	fork_child_shell(slave_pts);
-
-	// Set raw mode for current tty (noecho, no special character interpretation...)
-	//set_tty_raw();
-
-	read_bytes = 1;
-
-	// Get input from user/output from terminal
-	while ( read_bytes > 0 )
+	if ( server < 0 )
 	{
-		FD_ZERO(&fds);
-		FD_SET(accepted,&fds);
-		FD_SET(masterfd,&fds);
+		perror("create\n");
+		exit(1);
+	}
 
-		selret = select(accepted > masterfd ? accepted+1 : masterfd+1,&fds,NULL,NULL,NULL);
+	while (	1 )
+	{
+		accepted = accept_inet_stream_socket(server,NULL,0,NULL,0,0,0);
 
-		if ( selret == -1 )
-			perror("select\n");
-
-		if ( FD_ISSET(accepted,&fds) ) // We may read data from the network connection
+		if ( accepted < 0 )
 		{
-			memset(buffer,0,32);
-			
-			read_bytes = read(accepted,buffer,31);
-			write(masterfd,buffer,read_bytes);
-
-			continue;
+			perror("accept\n");
+			exit(1);
 		}
+		// Fork child for concurrent operation
+		handle_pid = fork();
 
-		if ( FD_ISSET(masterfd,&fds) ) // The child process wrote something to the terminal
+		if ( handle_pid > 0 ) // We're parent
 		{
-			memset(buffer,0,32);
-
-			read_bytes = read(masterfd,buffer,31);
-			write(accepted,buffer,read_bytes);
-
+			// Child process holds a reference on the socket.
+			// If it terminates, it should be the only reference to this socket
+			// so the client may close.
+			close(accepted);
 			continue;
+		} else if ( handle_pid == 0 ) // We're in the server child
+		{
+
+			// Allocate new pseudo terminal
+			masterfd = posix_openpt(O_RDWR|O_NOCTTY);
+
+			if ( masterfd < 0 )
+			{
+				perror("posix_openpt\n");
+				exit(1);
+			}
+
+			// Change permissions of terminal
+			retbuf = grantpt(masterfd);
+
+			if ( retbuf < 0 )
+			{
+				perror("grantpt\n");
+				exit(1);
+			}
+
+			// Get name of terminal (/dev/pts/...)
+			slave_pts = ptsname(masterfd);
+
+			if ( slave_pts == NULL )
+			{
+				perror("ptsname\n");
+				exit(1);
+			}
+
+			// Unlock terminal so the child can read/write from/to it
+			retbuf = unlockpt(masterfd);
+
+			if ( retbuf < 0 )
+			{
+				perror("unlockpt\n");
+				exit(1);
+			}
+
+			// Fork child
+			fork_child_shell(slave_pts);
+
+			// Set raw mode for current tty (noecho, no special character interpretation...)
+			//set_tty_raw();
+
+			read_bytes = 1;
+
+			// Get input from user/output from terminal
+			while ( read_bytes > 0 )
+			{
+				FD_ZERO(&fds);
+				FD_SET(accepted,&fds);
+				FD_SET(masterfd,&fds);
+
+				selret = select(accepted > masterfd ? accepted+1 : masterfd+1,&fds,NULL,NULL,NULL);
+
+				if ( selret == -1 )
+					perror("select\n");
+
+				if ( FD_ISSET(masterfd,&fds) ) // The child process wrote something to the terminal
+				{
+					memset(buffer,0,32);
+
+					read_bytes = read(masterfd,buffer,31);
+					write(accepted,buffer,read_bytes);
+				}
+
+				if ( read_bytes <= 0 )
+					break;
+
+				if ( FD_ISSET(accepted,&fds) ) // We may read data from the network connection
+				{
+					memset(buffer,0,32);
+
+					read_bytes = read(accepted,buffer,31);
+					write(masterfd,buffer,read_bytes);
+				}
+			}
+
+			// Wait for the shell
+			waitpid(cpid,0,0);
+
+			close(accepted);
+			close(masterfd);
+
+			exit(0);
 		}
 	}
-	
-	// Wait for the shell
-	waitpid(cpid,0,0);
-
-	close(accepted);
-	close(masterfd);
 
 	return 0;
 }
@@ -133,9 +168,9 @@ void fork_child_shell(const char* slavepts)
 	// Which shell do we execute?
 	if ( shell == NULL )
 		shell = "/bin/bash";
-	
+
 	cpid = fork();
-	
+
 	if ( cpid < 0 )
 	{
 		perror("fork\n");
@@ -151,7 +186,7 @@ void fork_child_shell(const char* slavepts)
 	{
 		// Open the slave part of the pseudo terminal
 		slavefd = open(slavepts,O_RDWR);
-		
+
 		// This process has now the slave pts as controlling terminal (CTTY);
 		// therefore we have to start a new session with us as session leader
 		// because a session is defined as group of processes with the same CTTY.
