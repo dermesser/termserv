@@ -3,3 +3,11 @@ it's able to transmit a whole shell session over network, including vim, less,
 htop etc.
 
 It makes heavy use of pseudo terminals.
+
+termserv uses libsocket (https://github.com/dermesser/libsocket). Please install it before
+compiling termserv with the following commands:
+
+	$ gcc -o srv -lsocket termserv.c
+	$ gcc -o cl -lsocket client.c
+
+What's also important: Adapt the IP in client.c to your environment!
