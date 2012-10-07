@@ -152,7 +152,10 @@ void fork_child_shell(const char* slavepts)
 		// Open the slave part of the pseudo terminal
 		slavefd = open(slavepts,O_RDWR);
 		
-		// New session (enables job control in bash)
+		// This process has now the slave pts as controlling terminal (CTTY);
+		// therefore we have to start a new session with us as session leader
+		// because a session is defined as group of processes with the same CTTY.
+		// And we do not have the CTTY of the original process (the actual server)
 		setsid();
 
 		// Set windows size obtained before
