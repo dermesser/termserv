@@ -18,7 +18,7 @@ int main(void)
 	ssize_t read_bytes = 1;
 	char buffer[32];
 
-	clfd = create_inet_stream_socket("127.0.0.1","12345",IPv4,0);
+	clfd = create_inet_stream_socket("127.0.0.1","12345",LIBSOCKET_IPv4,0);
 
 	// Get all characters from calling tty (client tty)
 	set_tty_raw();
