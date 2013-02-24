@@ -12,5 +12,8 @@ compiling termserv with the following commands:
 
 What's also important: Adapt the IP in client.c to your environment!
 
+Termserv sends the window size as `struct winsize` first so it may cause problems when running on
+different architectures...
+
 ===>>>>> AND THIS IS REALLY, REALLY, REALLY IMPORTANT: A RUNNING TERMSERV INSTANCE IS AN OPEN TELNET
 SERVER WITH ACCESS TO THE FULL ACCOUNT AND SHELL OF THE OWNER OF THE SERVER!!!11! <<<<<<===

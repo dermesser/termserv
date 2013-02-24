@@ -183,14 +183,13 @@ void fork_child_shell(const char* slavepts, struct winsize ws)
 		return;
 
 	// Child...
-	if ( cpid == 0 ) // We're in the child process
+	if ( cpid == 0 ) // We're in the child process, it's later the shell
 	{
 		// Get out of the server's session
 		setsid();
 
 		// Open the slave part of the pseudo terminal
 		slavefd = open(slavepts,O_RDWR);
-
 
 		// Set windows size obtained before
 		ioctl(slavefd,TIOCSWINSZ,&ws);
