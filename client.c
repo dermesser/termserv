@@ -20,7 +20,7 @@ int main(void)
 	char buffer[32];
 	struct winsize ws;
 
-	clfd = create_inet_stream_socket("latitude","12345",LIBSOCKET_IPv6,0);
+	clfd = create_inet_stream_socket("localhost","12345",LIBSOCKET_IPv6,0);
 
 	// Get all characters from calling tty (client tty)
 	set_tty_raw();
