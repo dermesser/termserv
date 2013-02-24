@@ -184,14 +184,12 @@ void fork_child_shell(const char* slavepts)
 	// Child...
 	if ( cpid == 0 ) // We're in the child process
 	{
+		// Get out of the server's session
+		setsid();
+
 		// Open the slave part of the pseudo terminal
 		slavefd = open(slavepts,O_RDWR);
 
-		// This process has now the slave pts as controlling terminal (CTTY);
-		// therefore we have to start a new session with us as session leader
-		// because a session is defined as group of processes with the same CTTY.
-		// And we do not have the CTTY of the original process (the actual server)
-		setsid();
 
 		// Set windows size obtained before
 		ioctl(slavefd,TIOCSWINSZ,&ws);
