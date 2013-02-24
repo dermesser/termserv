@@ -30,6 +30,7 @@ int main(void)
 	ssize_t read_bytes = 0;
 	char* slave_pts;
 	char buffer[32];
+	struct winsize ws;
 
 	fd_set fds;
 
@@ -66,6 +67,7 @@ int main(void)
 			continue;
 		} else if ( handle_pid == 0 ) // We're in the server child
 		{
+			read(accepted,&ws,sizeof(struct winsize));
 
 			// Allocate new pseudo terminal
 			masterfd = posix_openpt(O_RDWR|O_NOCTTY);
@@ -104,7 +106,7 @@ int main(void)
 			}
 
 			// Fork child
-			fork_child_shell(slave_pts);
+			fork_child_shell(slave_pts,ws);
 
 			// Set raw mode for current tty (noecho, no special character interpretation...)
 			//set_tty_raw();
@@ -156,14 +158,13 @@ int main(void)
 	return 0;
 }
 
-void fork_child_shell(const char* slavepts)
+void fork_child_shell(const char* slavepts, struct winsize ws)
 {
 	int slavefd;
 	char* shell = getenv("SHELL");
-	struct winsize ws;
 
 	// Gain window size
-	ioctl(0,TIOCGWINSZ,&ws);
+	//ioctl(0,TIOCGWINSZ,&ws);
 
 	// Which shell do we execute?
 	if ( shell == NULL )

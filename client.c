@@ -5,6 +5,7 @@
 # include <sys/select.h>
 # include <string.h>
 # include <termios.h>
+# include <sys/ioctl.h>
 
 struct termios original_state;
 
@@ -17,11 +18,16 @@ int main(void)
 	fd_set fds;
 	ssize_t read_bytes = 1;
 	char buffer[32];
+	struct winsize ws;
 
-	clfd = create_inet_stream_socket("127.0.0.1","12345",LIBSOCKET_IPv4,0);
+	clfd = create_inet_stream_socket("latitude","12345",LIBSOCKET_IPv6,0);
 
 	// Get all characters from calling tty (client tty)
 	set_tty_raw();
+
+	ioctl(0,TIOCGWINSZ,&ws);
+
+	write(clfd,&ws,sizeof(struct winsize));
 
 	// Route data between user and server
 	while ( read_bytes > 0 )
