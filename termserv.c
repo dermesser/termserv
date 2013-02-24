@@ -15,7 +15,7 @@ struct termios original_state;
 
 pid_t cpid;
 
-void fork_child_shell(const char*);
+void fork_child_shell(const char*, struct winsize);
 
 // Util
 void process_child(int sig)
